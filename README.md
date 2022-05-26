@@ -1,32 +1,39 @@
-# Large CSV Reader GEM
+# Refactor
 
-This **gem** is created to help with a known issue, processing large **csv files** using **ruby,** without breaking our **RAM.** I used lazy enumeration to achieve this, that allows the methods to execute actions on one line at a time instead of loading millions of lines in memory at once.
-
-I consider this **gem** in **Beta state**, proper testing suite is still missing and there are some improvements or extensions that could be useful to have in a full version of it.
+Refactor for making the previous solution (simple csv reader) works with massive data size.
 
 
-# Installation
-`gem install large_csv_reader`
-- In your files:
-	`require 'large_csv_reader'`
+## Changes
 
-# Usage
-
-## General Methods
-|Function|Description  |
-|--|--|
-| `reader = LargeCsvReader.new` | creates a new instance of the reader|
-|`reader.generate_csv(fileName, columnNames)`|creates a new csv file with the name and header names passed as parameters|
-|`reader.append_to_csv(filename, rows=1000000,rowStructure)`|Add lines to the csv, this lines are generated with the rowStructure array parameter. If rows parameters is not present by default it will load 1 million lines to the file.|
-|`reader.massive_read_in_csv_data (file_name)`|lazy load of each csv row into a list|
-|`reader.massive_csv_builder(filename, column_names,rowMult="1")`|create a csv with millions of lines, the value of rowMult represents how many millions lines the file will have|
-|`reader.row_generator(structure)`|generate rows on demand using enumeration|
-
-## Specific Methods
-The **rest** of the methods are considerations to solve a **test problem** with **book data** "**Date**", "**ISBN**", "**Price**"
-
- - `massive_total_value_in_stock(csv_file_name)`
- - `massive_number_of_each_isbn(csv_file_name)`
- - `append_book_to_csv(filename,rows=1000000)`
- - `book_generator`
-    
+- Created a method that generates static books using a enumerator
+  
+   ```ruby
+    def book_generator
+      Enumerator.new do |caller|  				            		      
+        testBook = BookInStock.new("978-1-9343561-0-4"20.05)                    
+        loop do
+                caller.yield testBook                
+        end
+      end
+    end 
+  `
+ - The new reader use lazy enumeration to process one line at a time instead of loading the whole file into memory
+    ```ruby
+      def massive_read_in_csv_data(csv_file_name)
+        CSV.foreach(csv_file_name, headers: true).each_slice(1).each {|row| @books_in_stock << BookInStock.new(row[0][1], row[0][2])}
+      end
+    `
+- Now you can calculate the total in stock with lazy reading without the need of storing a massive data structure in memory
+    ```ruby
+      def massive_total_value_in_stock(csv_file_name)
+          CSV.foreach(csv_file_name, headers: true).each_slice(1).each.inject(0) {|sum, row| sum + row[0][2].to_f }
+      end
+  `
+- The method that build the ISBN frecuency counter remains the same but now is invoked by a lazy enumerator
+    ```ruby
+      def massive_number_of_each_isbn(csv_file_name)
+        counter_hash = {}
+        CSV.foreach(csv_file_name, headers: true).each_slice(1).each {|row| number_of_each_isbn(counter_hash, row) }
+        return counter_hash
+      end
+    ```
