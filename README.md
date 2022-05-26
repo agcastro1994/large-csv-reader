@@ -35,5 +35,5 @@ Refactor for making the previous solution (simple csv reader) works with massive
         counter_hash = {}
         CSV.foreach(csv_file_name, headers: true).each_slice(1).each {|row| number_of_each_isbn(counter_hash, row) }
         return counter_hash
-      end
+      end 
     ```
